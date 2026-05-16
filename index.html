@@ -1,26 +1,119 @@
 <!DOCTYPE html>
+<!--
+  Wrapper untuk Google Apps Script E-Slip Gaji DPRKPCK Jatim.
+
+  Cara pakai:
+  1. Ganti GAS_URL di bawah dengan URL deployment Web App Apps Script Anda.
+  2. Deploy file ini sebagai index.html di repo GitHub Pages
+     (https://umpegdprkpck.github.io/suketgaji/).
+  3. Aplikasi Next.js cukup membuka URL wrapper dengan ?nip=...&token=...
+     (sudah dilakukan otomatis oleh tombol "Buka E-Slip Gaji" di dashboard).
+
+  Cara kerja:
+  - Wrapper membaca ?nip=...&token=... dari URL miliknya
+  - Lalu meng-inject parameter tersebut ke src iframe Google Apps Script
+  - Apps Script doGet(e) menerima params seperti biasa, lanjut auto-SSO
+-->
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suket Gaji DPRKPCK Jatim</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden; /* Mencegah scroll dari body utama */
-            background-color: #f4f7f6;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Slip Gaji — DPRKPCK Provinsi Jawa Timur</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+    }
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #f3f4f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    #loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #4f46e5;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-title {
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .loader-text {
+      color: #6b7280;
+      font-size: 13px;
+    }
+    #gasFrame {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
-    <iframe src="https://script.google.com/macros/s/AKfycbwoeNuxiULGqZh1JCAgiPjAuk19eV6gCCrgXul9DH5Rc_BwQnTSib5zDt-1GpLq9JXL0w/exec" allow="camera; microphone; fullscreen; display-capture"></iframe>
+  <div id="loader">
+    <div class="spinner"></div>
+    <div class="loader-title">E-Slip Gaji DPRKPCK</div>
+    <div class="loader-text">Memuat aplikasi...</div>
+  </div>
+
+  <iframe id="gasFrame" title="E-Slip Gaji DPRKPCK Jatim" allow="clipboard-write"></iframe>
+
+  <script>
+    // ⚠️ GANTI dengan URL deployment Google Apps Script Anda
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwoeNuxiULGqZh1JCAgiPjAuk19eV6gCCrgXul9DH5Rc_BwQnTSib5zDt-1GpLq9JXL0w/exec";
+
+    // Baca parameter SSO dari URL wrapper (?nip=...&token=...)
+    const params = new URLSearchParams(window.location.search);
+    const nip = params.get("nip");
+    const token = params.get("token");
+
+    // Bangun URL iframe — kalau ada SSO params, teruskan ke GAS
+    let iframeSrc = GAS_URL;
+    if (nip && token) {
+      iframeSrc +=
+        "?nip=" + encodeURIComponent(nip) +
+        "&token=" + encodeURIComponent(token);
+
+      // Bersihkan URL wrapper agar token tidak ter-bookmark / ter-share
+      try {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (_) { /* abaikan bila browser membatasi */ }
+    }
+
+    const iframe = document.getElementById("gasFrame");
+    const loader = document.getElementById("loader");
+
+    iframe.addEventListener("load", function () {
+      // Beri sedikit delay agar UI Apps Script (Tailwind + JS) sempat render
+      setTimeout(function () {
+        loader.classList.add("hidden");
+      }, 400);
+    });
+
+    iframe.src = iframeSrc;
+  </script>
 </body>
 </html>
